@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:8080"  # Single port exposure
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - mcpo
+    networks:
+      - taskwarrior-net
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    environment:
+      - VITE_API_URL=http://localhost:8080/api
+      - VITE_MCPO_URL=http://localhost:8080/api
+      - VITE_MCPO_API_KEY=taskwarrior-secret-key
+    ports:
+      - "3033:3033"
+    networks:
+      - taskwarrior-net
+    restart: unless-stopped
+
+  # MCPO with MCP Server
+  mcpo:
+    build:
+      context: ./apps/mcp-server
+      dockerfile: Dockerfile
+    command: >
+      mcpo
+      --port 8885
+      --api-key "taskwarrior-secret-key"
+      --host "0.0.0.0"
+      -- python /app/src/taskwarrior_mcp_server.py
+    environment:
+      - MCPO_API_KEY=taskwarrior-secret-key
+    ports:
+      - "8885:8885"
+    volumes:
+      - ~/.task:/root/.task  # Mount TaskWarrior data
+    networks:
+      - taskwarrior-net
+    restart: unless-stopped
+
+networks:
+  taskwarrior-net:
+    driver: bridge

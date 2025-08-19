@@ -1,0 +1,60 @@
+{
+  "mcpServers": {
+    "taskwarrior": {
+      "command": "python",
+      "args": ["/Users/meirm/git/riunx/taskwarrior-ng/apps/mcp-server/src/taskwarrior_mcp_server.py"],
+      "env": {
+        "TASKDATA": "/path/to/taskwarrior/data"
+      }
+    }
+  },
+  "server_info": {
+    "name": "taskwarrior-mcp",
+    "version": "1.0.0",
+    "description": "FastMCP-based Taskwarrior MCP Server",
+    "author": "Taskwarrior-NG Team",
+    "repository": "https://github.com/your-repo/taskwarrior-ng",
+    "mcp_version": "1.13.0",
+    "fastmcp_version": "2.11.3"
+  },
+  "features": {
+    "tools": 19,
+    "resources": 3,
+    "prompts": 3,
+    "capabilities": [
+      "task_management",
+      "time_tracking", 
+      "project_organization",
+      "batch_operations",
+      "database_maintenance",
+      "advanced_filtering",
+      "productivity_analysis",
+      "smart_prompts",
+      "rich_resources",
+      "error_handling",
+      "type_validation",
+      "pydantic_optimization",
+      "type_safety"
+    ]
+  },
+  "configuration": {
+    "logging_level": "INFO",
+    "default_task_limit": 50,
+    "use_default_taskdata": true,
+    "custom_taskdata_path": null,
+    "enable_time_tracking": true,
+    "date_format": "ISO",
+    "timezone_aware": true
+  },
+  "installation": {
+    "python_version_min": "3.8",
+    "python_version_recommended": "3.11",
+    "taskwarrior_version_min": "2.4.0",
+    "dependencies": [
+      "tasklib>=2.5.1",
+      "mcp>=1.13.0", 
+      "pydantic>=2.0.0",
+      "fastmcp>=2.11.3"
+    ]
+  }
+}

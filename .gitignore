@@ -1,0 +1,14 @@
+__pycache__/
+.env
+.DS_Store
+.vscode/
+
+node_modules/
+venv/
+
+CLAUDE.local.md
+
+logs/
+
+.claude/
+ignore/

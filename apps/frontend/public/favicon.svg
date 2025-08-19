@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#3B82F6"/>
+  
+  <!-- Checkmark -->
+  <path d="M9 16L13 20L23 10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- Task lines (representing a task list) -->
+  <rect x="8" y="24" width="16" height="2" rx="1" fill="white" opacity="0.6"/>
+</svg>

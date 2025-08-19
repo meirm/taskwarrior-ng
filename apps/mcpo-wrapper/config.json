@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "taskwarrior": {
+      "command": "python",
+      "args": ["../mcp-server/src/taskwarrior_mcp_server.py"],
+      "description": "TaskWarrior MCP Server for task management",
+      "env": {},
+      "cwd": "/Users/meirm/git/riunx/taskwarrior-ng/apps/mcpo-wrapper"
+    }
+  }
+}
