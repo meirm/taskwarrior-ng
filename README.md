@@ -4,6 +4,8 @@ A modern full-stack web application for TaskWarrior task management with React f
 
 TaskWarrior-NG provides a beautiful, responsive web interface for managing TaskWarrior tasks, combining the power of the command-line tool with a modern UI. Built with cutting-edge technologies and designed for productivity.
 
+ ![TaskWarrior-NG Screenshot](screenshot.png)
+
 ## ✨ Key Features
 
 ### 🎨 **Modern User Interface**
@@ -60,29 +62,31 @@ taskwarrior-ng/
 │   │   ├── src/          # Frontend source code
 │   │   ├── public/       # Static assets
 │   │   └── package.json  # Frontend dependencies
-│   ├── api-bridge/       # Express.js API bridge server
-│   │   ├── src/          # API server code
-│   │   └── package.json  # API dependencies
+│   ├── mcpo-wrapper/     # MCPO configuration and startup
+│   │   ├── config.json   # MCP server configuration
+│   │   ├── start-mcpo.sh # MCPO startup script
+│   │   └── README.md     # MCPO wrapper documentation
 │   └── mcp-server/       # TaskWarrior MCP server
 │       ├── src/          # Python MCP server
 │       └── config/       # Configuration files
 ├── start-dev.sh          # Development startup script
-├── ai_docs/              # AI-related documentation
+├── docs/                 # Documentation
 └── README.md             # This file
 ```
 
 ### Component Communication
 
 ```
-[React Frontend] <--> [API Bridge] <--> [MCP Server] <--> [TaskWarrior Database]
-   Port 3033           Port 8085         stdio              ~/.task/
+[React Frontend] <--> [MCPO REST API] <--> [MCP Server] <--> [TaskWarrior CLI]
+   Port 3033         Port 8885/api/mcpo/     stdio            ~/.task/
+                        taskwarrior/
 ```
 
 **Technology Stack:**
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
-- **API Bridge**: Express.js + Node.js
+- **API Layer**: MCPO (Model Context Protocol to OpenAPI)
 - **MCP Server**: Python + FastMCP + Pydantic + tasklib
-- **Database**: TaskWarrior SQLite database
+- **Backend**: TaskWarrior CLI + SQLite database
 - **UI Components**: Custom component library with Lucide icons
 
 ## Quick Start
@@ -151,12 +155,11 @@ npm install
 npm run dev        # Start development server (default port 3033)
 ```
 
-#### API Bridge Development
+#### MCPO Server Development
 
 ```bash
-cd apps/api-bridge
-npm install
-npm run dev        # Start with nodemon (default port 8085)
+cd apps/mcpo-wrapper
+./start-mcpo.sh    # Start MCPO server (default port 8085)
 ```
 
 #### MCP Server Development
@@ -174,54 +177,57 @@ python src/taskwarrior_mcp_server.py
 #### Frontend Configuration
 Create `apps/frontend/.env.local`:
 ```env
-VITE_API_URL=http://localhost:8085/api
+VITE_API_HOST=localhost
+VITE_API_PORT=8885
+VITE_API_PREFIX=/api/mcpo/taskwarrior
+VITE_MCPO_API_KEY=taskwarrior-secret-key
 ```
 
-#### API Bridge Configuration
-Create `apps/api-bridge/.env`:
+#### MCPO Configuration
+Environment variables for `apps/mcpo-wrapper/start-mcpo.sh`:
 ```env
-PORT=8085
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3033
-MCP_SERVER_PATH=../mcp-server/src/taskwarrior_mcp_server.py
-LOG_LEVEL=info
+MCPO_PORT=8885
+MCPO_HOST=0.0.0.0
+MCPO_PATH_PREFIX=/api/mcpo/
+MCPO_API_KEY=taskwarrior-secret-key
 ```
 
 ## 🔌 API Reference
 
-The API bridge exposes comprehensive RESTful endpoints:
+MCPO automatically exposes all MCP tools as RESTful endpoints at `/api/mcpo/taskwarrior/`:
 
 ### Task Operations
-- `GET /api/tasks` - List tasks with advanced filtering options
-- `POST /api/tasks` - Create new task with validation
-- `GET /api/tasks/:id` - Get detailed task information
-- `PUT /api/tasks/:id` - Update task properties
-- `DELETE /api/tasks/:id` - Move task to trash
-- `POST /api/tasks/:id/complete` - Mark task as completed
-- `POST /api/tasks/:id/uncomplete` - Revert completed task to pending
-- `POST /api/tasks/:id/start` - Start task timer
-- `POST /api/tasks/:id/stop` - Stop task timer
-- `POST /api/tasks/:id/restore` - Restore deleted task from trash
+- `POST /api/mcpo/taskwarrior/list_tasks` - List tasks with filtering
+- `POST /api/mcpo/taskwarrior/add_task` - Create new task
+- `POST /api/mcpo/taskwarrior/get_task` - Get task details
+- `POST /api/mcpo/taskwarrior/modify_task` - Update task properties
+- `POST /api/mcpo/taskwarrior/delete_task` - Move task to trash
+- `POST /api/mcpo/taskwarrior/complete_task` - Mark as completed
+- `POST /api/mcpo/taskwarrior/uncomplete_task` - Revert to pending
+- `POST /api/mcpo/taskwarrior/start_task` - Start task timer
+- `POST /api/mcpo/taskwarrior/stop_task` - Stop task timer
+- `POST /api/mcpo/taskwarrior/restore_task` - Restore from trash
 
 ### Batch Operations
-- `POST /api/tasks/batch/complete` - Complete multiple tasks by IDs
-- `POST /api/tasks/batch/complete-filter` - Complete tasks matching filters
-- `POST /api/tasks/batch/uncomplete` - Uncomplete multiple tasks by IDs
-- `POST /api/tasks/batch/uncomplete-filter` - Uncomplete tasks matching filters
-- `POST /api/tasks/batch/delete` - Delete multiple tasks by IDs
-- `POST /api/tasks/batch/delete-filter` - Delete tasks matching filters
-- `POST /api/tasks/batch/start` - Start timers for multiple tasks
-- `POST /api/tasks/batch/stop` - Stop timers for multiple tasks
-- `POST /api/tasks/batch/modify` - Modify multiple tasks at once
+- `POST /api/mcpo/taskwarrior/batch_complete_by_ids` - Complete multiple tasks
+- `POST /api/mcpo/taskwarrior/batch_complete_by_filter` - Complete by filter
+- `POST /api/mcpo/taskwarrior/batch_uncomplete_by_ids` - Uncomplete multiple
+- `POST /api/mcpo/taskwarrior/batch_uncomplete_by_filter` - Uncomplete by filter
+- `POST /api/mcpo/taskwarrior/batch_delete_by_ids` - Delete multiple tasks
+- `POST /api/mcpo/taskwarrior/batch_delete_by_filter` - Delete by filter
+- `POST /api/mcpo/taskwarrior/batch_start_by_ids` - Start multiple timers
+- `POST /api/mcpo/taskwarrior/batch_stop_by_ids` - Stop multiple timers
+- `POST /api/mcpo/taskwarrior/batch_modify_tasks` - Modify multiple tasks
 
 ### Metadata & Analytics
-- `GET /api/projects` - List all projects with task counts
-- `GET /api/tags` - List all tags with usage statistics
-- `GET /api/summary` - Get comprehensive task statistics and analytics
+- `POST /api/mcpo/taskwarrior/get_projects` - List all projects
+- `POST /api/mcpo/taskwarrior/get_tags` - List all tags
+- `POST /api/mcpo/taskwarrior/get_summary` - Task statistics
 
 ### Maintenance Operations
-- `POST /api/tasks/purge` - Permanently delete all trashed tasks
-- `GET /health` - Health check and system status
+- `POST /api/mcpo/taskwarrior/purge_deleted_tasks` - Purge trash
+- `GET /docs` - OpenAPI documentation
+- `GET /openapi.json` - OpenAPI specification
 
 ### Advanced Features
 - **UUID Support**: All endpoints support both numeric IDs and UUIDs for reliability
@@ -257,12 +263,12 @@ Modern React application with TypeScript:
 - **Form Handling**: React Hook Form with validation
 - **API Integration**: Type-safe API client with error handling
 
-### **API Bridge** (`apps/api-bridge/`)
-Express.js server bridging frontend and MCP:
-- **RESTful Architecture**: Clean endpoint design
-- **MCP Integration**: Stdio communication with Python server
-- **Error Handling**: Comprehensive error recovery
-- **Response Parsing**: Standardized MCP response handling
+### **MCPO Wrapper** (`apps/mcpo-wrapper/`)
+Configuration and startup for MCPO server:
+- **Automatic API Generation**: MCP tools exposed as REST endpoints
+- **OpenAPI Documentation**: Auto-generated API docs at `/docs`
+- **Bearer Authentication**: Secure API access with tokens
+- **CORS Support**: Configured for frontend integration
 
 ### **Tests** (`apps/tests/`)
 Comprehensive test coverage:
@@ -289,6 +295,29 @@ Comprehensive test coverage:
 - **Data Validation**: Input sanitization and type checking
 - **Error Recovery**: Graceful error handling with user feedback
 - **UUID Tracking**: Reliable task identification across operations
+
+## 🤖 AI Integration
+
+TaskWarrior-NG is designed to work seamlessly with AI agents through the MCP protocol:
+
+### Claude Desktop Integration
+Add the MCP server to your Claude Desktop configuration:
+```json
+{
+  "mcpServers": {
+    "taskwarrior": {
+      "command": "python",
+      "args": ["/path/to/taskwarrior-ng/apps/mcp-server/src/taskwarrior_mcp_server.py"]
+    }
+  }
+}
+```
+
+### Unified Backend
+- **Same API**: Both web UI and AI agents use the same backend
+- **Real-time Sync**: Changes made by AI are instantly visible in the web interface
+- **Natural Language**: AI agents can manage tasks through conversation
+- **MCP Protocol**: Industry-standard protocol for AI-tool integration
 
 ## 🛠️ Development
 
