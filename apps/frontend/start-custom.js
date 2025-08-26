@@ -4,7 +4,7 @@ const viteProcess = spawn('npx', ['vite', '--host', '--port', '3033'], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    VITE_API_URL: 'http://localhost:8885/api'
+    VITE_API_URL: 'http://localhost:8085/api'
   }
 });
 

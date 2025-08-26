@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, RefreshCw, AlertTriangle, Undo2, CheckSquare, Square, MinusSquare } from 'lucide-react';
-import { taskWarriorAPI } from '@/services/api';
+import { taskWarriorMCPOAPI as taskWarriorAPI } from '@/services/api-mcpo';
 import { Task } from '@/types/task';
 import { formatTaskDate } from '@/utils/date';
 import Button from '@/components/ui/Button';
@@ -128,11 +128,15 @@ export function TrashPage() {
       if (successCount > 0) {
         // Reload the task list
         await loadDeletedTasks();
+        // Clear selection after successful restoration
+        setSelectedTasks(new Set());
         console.log(`Successfully restored ${successCount} tasks`);
       }
       
       if (successCount < selectedTasks.size) {
         setError(`Restored ${successCount} of ${selectedTasks.size} tasks. Some tasks failed to restore.`);
+        // Clear selection even on partial success
+        setSelectedTasks(new Set());
       }
       
     } catch (err) {
@@ -157,10 +161,15 @@ export function TrashPage() {
       const response = await taskWarriorAPI.restoreTask(taskId, 'pending');
       
       if (response.success) {
-        // Remove the restored task from the deleted list
-        setDeletedTasks(prev => prev.filter(t => 
-          (t.uuid !== task.uuid) && (t.id !== task.id)
-        ));
+        // Reload the task list to ensure consistency with backend
+        await loadDeletedTasks();
+        
+        // Clear selection if the restored task was selected
+        setSelectedTasks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(taskId);
+          return newSet;
+        });
         
         // Show success message (could use a toast here)
         console.log('Task restored successfully');
@@ -184,12 +193,13 @@ export function TrashPage() {
       setPurging(true);
       const response = await taskWarriorAPI.purgeDeletedTasks();
       
-      if (response.success) {
+      if (response.success && response.data) {
         setDeletedTasks([]);
         setShowPurgeDialog(false);
-        console.log(`Purged ${response.purged_count} tasks`);
+        console.log(`Purged ${response.data.purged_count} tasks`);
+        // You might also show the message: response.data.message
       } else {
-        setError('Failed to purge tasks');
+        setError(response.data?.message || 'Failed to purge tasks');
       }
     } catch (err) {
       setError('Failed to purge tasks');

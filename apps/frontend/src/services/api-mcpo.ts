@@ -221,18 +221,27 @@ class TaskWarriorMCPOAPI {
     return this.client.purgeTasks();
   }
 
+  // Alias for compatibility with api.ts interface
+  async purgeDeletedTasks(): Promise<ApiResponse<{ message: string; purged_count: number }>> {
+    return this.purgeTasks();
+  }
+
   // Restore Task Operation (for trash recovery)
-  async restoreTask(taskId: number | string, uuid?: string): Promise<ApiResponse<{ message: string; task: Task }>> {
-    const params = uuid ? { uuid } : { task_id: taskId };
+  async restoreTask(taskId: number | string, status?: string): Promise<ApiResponse<{ message: string; task: Task }>> {
+    const params = {
+      task_id: typeof taskId === 'number' ? taskId : undefined,
+      uuid: typeof taskId === 'string' ? taskId : undefined,
+      status: status || 'pending'
+    };
     const response = await this.client.invokeTool<any, any>('restore_task', params);
     
-    if (response.success && response.content?.[0]?.text) {
-      const result = JSON.parse(response.content[0].text);
+    // MCPO returns the result directly, not wrapped in content
+    if (response.success) {
       return {
-        success: result.success,
+        success: response.success,
         data: {
-          message: result.message || 'Task restored successfully',
-          task: result.task,
+          message: response.message || 'Task restored successfully',
+          task: response.task,
         },
       };
     }

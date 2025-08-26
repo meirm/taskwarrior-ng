@@ -477,7 +477,7 @@ export class MCPOClient {
    * Purge deleted tasks
    */
   async purgeTasks(): Promise<ApiResponse<{ message: string; purged_count: number }>> {
-    const response = await this.invokeTool<undefined, any>('purge_tasks');
+    const response = await this.invokeTool<undefined, any>('purge_deleted_tasks');
     
     // MCPO returns the result directly
     if (response.success) {

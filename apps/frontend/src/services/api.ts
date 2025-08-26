@@ -182,6 +182,17 @@ class TaskWarriorAPI {
 
   // Batch Operations
   async batchCompleteByIds(taskIds: number[]): Promise<ApiResponse<{ completed_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_complete_tasks', { task_ids: taskIds });
+      return {
+        success: result.success,
+        data: {
+          completed_count: result.completed_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/complete', {
       method: 'POST',
       body: JSON.stringify({ task_ids: taskIds }),
@@ -189,6 +200,17 @@ class TaskWarriorAPI {
   }
 
   async batchCompleteByFilter(filters: BatchFilterParams): Promise<ApiResponse<{ completed_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_complete_by_filter', filters);
+      return {
+        success: result.success,
+        data: {
+          completed_count: result.completed_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/complete-filter', {
       method: 'POST',
       body: JSON.stringify(filters),
@@ -196,6 +218,21 @@ class TaskWarriorAPI {
   }
 
   async batchUncompleteByIds(taskIds: number[], taskUuids?: Record<number, string>): Promise<ApiResponse<{ uncompleted_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const params: any = { task_ids: taskIds };
+      if (taskUuids) {
+        params.task_uuids = taskUuids;
+      }
+      const result = await this.invokeTool<any>('batch_uncomplete_tasks', params);
+      return {
+        success: result.success,
+        data: {
+          uncompleted_count: result.uncompleted_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     // If we have UUIDs, include them in the request
     const body: any = { task_ids: taskIds };
     if (taskUuids) {
@@ -208,6 +245,17 @@ class TaskWarriorAPI {
   }
 
   async batchUncompleteByFilter(filters: BatchFilterParams): Promise<ApiResponse<{ uncompleted_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_uncomplete_by_filter', filters);
+      return {
+        success: result.success,
+        data: {
+          uncompleted_count: result.uncompleted_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/uncomplete-filter', {
       method: 'POST',
       body: JSON.stringify(filters),
@@ -215,6 +263,17 @@ class TaskWarriorAPI {
   }
 
   async batchDeleteByIds(taskIds: number[]): Promise<ApiResponse<{ deleted_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_delete_tasks', { task_ids: taskIds });
+      return {
+        success: result.success,
+        data: {
+          deleted_count: result.deleted_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/delete', {
       method: 'POST',
       body: JSON.stringify({ task_ids: taskIds }),
@@ -222,6 +281,17 @@ class TaskWarriorAPI {
   }
 
   async batchDeleteByFilter(filters: BatchFilterParams): Promise<ApiResponse<{ deleted_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_delete_by_filter', filters);
+      return {
+        success: result.success,
+        data: {
+          deleted_count: result.deleted_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/delete-filter', {
       method: 'POST',
       body: JSON.stringify(filters),
@@ -229,6 +299,17 @@ class TaskWarriorAPI {
   }
 
   async batchStartByIds(taskIds: number[]): Promise<ApiResponse<{ started_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_start_tasks', { task_ids: taskIds });
+      return {
+        success: result.success,
+        data: {
+          started_count: result.started_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/start', {
       method: 'POST',
       body: JSON.stringify({ task_ids: taskIds }),
@@ -236,6 +317,17 @@ class TaskWarriorAPI {
   }
 
   async batchStopByIds(taskIds: number[]): Promise<ApiResponse<{ stopped_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_stop_tasks', { task_ids: taskIds });
+      return {
+        success: result.success,
+        data: {
+          stopped_count: result.stopped_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/stop', {
       method: 'POST',
       body: JSON.stringify({ task_ids: taskIds }),
@@ -243,6 +335,17 @@ class TaskWarriorAPI {
   }
 
   async batchModifyTasks(params: BatchModifyParams): Promise<ApiResponse<{ modified_count: number; results: any[]; errors: string[] }>> {
+    if (this.apiKey) {
+      const result = await this.invokeTool<any>('batch_modify_tasks', params);
+      return {
+        success: result.success,
+        data: {
+          modified_count: result.modified_count,
+          results: result.results || [],
+          errors: result.errors || [],
+        },
+      };
+    }
     return this.request('/tasks/batch/modify', {
       method: 'POST',
       body: JSON.stringify(params),
@@ -285,7 +388,7 @@ class TaskWarriorAPI {
   // Database Maintenance
   async purgeDeletedTasks(): Promise<ApiResponse<{ purged_count: number; message: string; details?: string }>> {
     if (this.apiKey) {
-      const result = await this.invokeTool<any>('purge_tasks');
+      const result = await this.invokeTool<any>('purge_deleted_tasks');
       return {
         success: result.success,
         data: {
