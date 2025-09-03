@@ -10,6 +10,7 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import Select from './ui/Select';
 import Modal from './ui/Modal';
+import ProjectSelector from './ProjectSelector';
 
 const taskSchema = z.object({
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
@@ -56,6 +57,9 @@ const TaskFormFixed: React.FC<TaskFormProps> = ({ task, isOpen, onClose }) => {
   const [selectedTags, setSelectedTags] = React.useState<string[]>(
     Array.isArray(task?.tags) ? task.tags : []
   );
+  const [selectedProject, setSelectedProject] = React.useState<string | undefined>(
+    task?.project || undefined
+  );
 
   // Reset form when modal opens/closes or task changes
   React.useEffect(() => {
@@ -71,6 +75,7 @@ const TaskFormFixed: React.FC<TaskFormProps> = ({ task, isOpen, onClose }) => {
       console.log('TaskFormFixed: Resetting with:', formValues);
       reset(formValues);
       setSelectedTags(Array.isArray(task?.tags) ? task.tags : []);
+      setSelectedProject(task?.project || undefined);
       setTagInput('');
       
       // Force set values after a small delay to ensure form is ready
@@ -106,6 +111,7 @@ const TaskFormFixed: React.FC<TaskFormProps> = ({ task, isOpen, onClose }) => {
       due: '',
     });
     setSelectedTags([]);
+    setSelectedProject(undefined);
     setTagInput('');
     onClose();
   };
@@ -115,7 +121,7 @@ const TaskFormFixed: React.FC<TaskFormProps> = ({ task, isOpen, onClose }) => {
       console.log('Submitting form data:', data);
       const taskData = {
         description: data.description,
-        project: data.project || undefined,
+        project: selectedProject || undefined,
         priority: (!data.priority || data.priority === '') ? undefined : data.priority as TaskPriority,
         tags: selectedTags,
         due: data.due ? new Date(data.due).toISOString() : undefined,
@@ -146,6 +152,11 @@ const TaskFormFixed: React.FC<TaskFormProps> = ({ task, isOpen, onClose }) => {
     }
   };
 
+  const handleProjectChange = (project: string | undefined) => {
+    setSelectedProject(project);
+    setValue('project', project || '');
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -165,18 +176,14 @@ const TaskFormFixed: React.FC<TaskFormProps> = ({ task, isOpen, onClose }) => {
 
         {/* Project and Priority row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
+          <ProjectSelector
             label="Project"
-            {...register('project')}
+            value={selectedProject}
+            onChange={handleProjectChange}
+            projects={projects}
             error={errors.project?.message}
-          >
-            <option value="">No Project</option>
-            {projects.map((project) => (
-              <option key={project} value={project}>
-                {project}
-              </option>
-            ))}
-          </Select>
+            placeholder="Select or create project"
+          />
 
           <Select
             label="Priority"

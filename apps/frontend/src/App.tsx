@@ -6,6 +6,7 @@ import ReportsPage from '@/pages/ReportsPage';
 import SettingsPage from '@/pages/SettingsPage';
 import TrashPageWithLayout from '@/pages/TrashPageWithLayout';
 import { AboutPage } from '@/pages/AboutPage';
+import ProjectSelectorTestPage from '@/pages/ProjectSelectorTestPage';
 import Layout from '@/components/Layout';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
               <AboutPage />
             </Layout>
           } />
+          <Route path="/test-project-selector" element={<ProjectSelectorTestPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

@@ -1,0 +1,3 @@
+# Spec Summary (Lite)
+
+Implement an advanced project selector component in the web interface that allows users to select from existing projects or create new ones directly when adding or editing tasks. The component will be a searchable dropdown with autocomplete that distinguishes between selecting existing projects and creating new ones, supporting hierarchical project names and integrating seamlessly into both task creation and edit forms.

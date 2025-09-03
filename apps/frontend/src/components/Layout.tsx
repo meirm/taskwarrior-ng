@@ -17,7 +17,7 @@ import { useTaskStore } from '@/stores/taskStore';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
 import Input from './ui/Input';
-import TaskForm from './TaskFormSimple';
+import TaskForm from './TaskFormFixed';
 
 interface LayoutProps {
   children: React.ReactNode;
