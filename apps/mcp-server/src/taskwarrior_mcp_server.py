@@ -11,10 +11,6 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
-# Add the utils directory to the path for imports
-sys.path.insert(0, str(Path(__file__).parent))
-from utils.fastmcp_wrapper import make_mcp_json_compatible
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -22,9 +18,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("taskwarrior-mcp.server")
 
-# Create MCP server instance with JSON compatibility
-mcp_base = FastMCP("Taskwarrior MCP Server")
-mcp = make_mcp_json_compatible(mcp_base)
+# Create MCP server instance
+mcp = FastMCP("Taskwarrior MCP Server")
 
 def load_module_tools(module_path: str, mcp_instance: FastMCP):
     """Dynamically load tools from a module"""
