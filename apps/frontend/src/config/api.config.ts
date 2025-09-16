@@ -133,7 +133,7 @@ export async function invokeMCPOTool<T = any>(
 ): Promise<T> {
   return apiRequest<T>(`/${toolName}`, {
     method: 'POST',
-    body: JSON.stringify({ params: params || {} }),
+    body: JSON.stringify( params || {}),
   });
 }
 
