@@ -196,6 +196,7 @@ start_mcpo() {
     export MCPO_API_KEY="taskwarrior-secret-key"
     export MCPO_HOST="0.0.0.0"
     export MCPO_PATH_PREFIX="/api/mcpo/"
+    export FRONTEND_PORT=$FRONTEND_PORT
     
     # Use the mcpo-wrapper start script which uses config.json
     ./start-mcpo.sh &
