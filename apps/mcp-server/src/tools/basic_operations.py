@@ -3,13 +3,13 @@ Basic task operations: add, list, get, complete, modify, delete, start, stop
 """
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Annotated
 
 from fastmcp import FastMCP
+from pydantic import Field
 from tasklib import Task
 
 from utils.taskwarrior import tw, task_to_dict, task_to_model
-from utils.models import AddTaskParams, ListTasksParams, TaskIdParam, ModifyTaskParams, RestoreTaskParams
 
 logger = logging.getLogger("taskwarrior-mcp.tools.basic")
 
@@ -34,20 +34,26 @@ def init_tools(mcp_instance: FastMCP):
     mcp.tool()(restore_task)
     mcp.tool()(purge_deleted_tasks)
 
-async def add_task(params: AddTaskParams) -> Dict[str, Any]:
+async def add_task(
+    description: Annotated[str, Field(description="Task description")],
+    project: Annotated[Optional[str], Field(description="Project name")] = None,
+    priority: Annotated[Optional[str], Field(description="Priority: H (High), M (Medium), L (Low)")] = None,
+    tags: Annotated[Optional[List[str]], Field(description="List of tags")] = None,
+    due: Annotated[Optional[str], Field(description="Due date in ISO format (UTC), e.g., '2025-08-22T18:00:00Z'")] = None
+) -> Dict[str, Any]:
     """Add a new task to Taskwarrior"""
     try:
-        task = Task(tw, description=params.description)
-        
-        if params.project:
-            task['project'] = params.project
-        if params.priority:
-            task['priority'] = params.priority
-        if params.tags:
-            task['tags'] = set(params.tags)
-        if params.due:
+        task = Task(tw, description=description)
+
+        if project:
+            task['project'] = project
+        if priority:
+            task['priority'] = priority
+        if tags:
+            task['tags'] = set(tags)
+        if due:
             # Parse the due date and convert to local time for TaskWarrior storage
-            due_dt = datetime.fromisoformat(params.due.replace('Z', '+00:00'))
+            due_dt = datetime.fromisoformat(due.replace('Z', '+00:00'))
             # Convert UTC to local time for TaskWarrior
             local_due = due_dt.astimezone()
             task['due'] = local_due
@@ -66,32 +72,37 @@ async def add_task(params: AddTaskParams) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def list_tasks(params: ListTasksParams) -> Dict[str, Any]:
+async def list_tasks(
+    status: Annotated[str, Field(description="Task status filter: pending, completed, deleted")] = "pending",
+    project: Annotated[Optional[str], Field(description="Filter by project name")] = None,
+    tags: Annotated[Optional[List[str]], Field(description="Filter by tags")] = None,
+    limit: Annotated[Optional[int], Field(description="Maximum number of tasks to return")] = None
+) -> Dict[str, Any]:
     """List tasks with optional filters"""
     try:
         # Build filter
         filters = {}
-        if params.status:
-            filters['status'] = params.status
-        if params.project:
-            filters['project'] = params.project
-        
+        if status:
+            filters['status'] = status
+        if project:
+            filters['project'] = project
+
         # Get tasks
         tasks = tw.tasks.filter(**filters)
-        
+
         # Apply tag filter if specified
-        if params.tags:
+        if tags:
             filtered_tasks = []
             for task in tasks:
                 task_model = task_to_model(task)
-                if any(tag in task_model.tags for tag in params.tags):
+                if any(tag in task_model.tags for tag in tags):
                     filtered_tasks.append(task)
             tasks = filtered_tasks
-        
+
         # Convert to list and limit if needed
         task_list = []
         for i, task in enumerate(tasks):
-            if params.limit and i >= params.limit:
+            if limit and i >= limit:
                 break
             task_list.append(task_to_dict(task))
         
@@ -107,18 +118,32 @@ async def list_tasks(params: ListTasksParams) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def get_task(params: TaskIdParam) -> Dict[str, Any]:
-    """Get details of a specific task by ID"""
+async def get_task(
+    task_id: Annotated[Optional[int], Field(description="Task ID")] = None,
+    uuid: Annotated[Optional[str], Field(description="Task UUID")] = None
+) -> Dict[str, Any]:
+    """Get details of a specific task by ID or UUID"""
     try:
-        task = tw.tasks.get(id=params.task_id)
+        if not task_id and not uuid:
+            return {
+                'success': False,
+                'error': "Either task_id or uuid must be provided"
+            }
+
+        if task_id:
+            task = tw.tasks.get(id=task_id)
+        else:
+            task = tw.tasks.get(uuid=uuid)
+
         return {
             'success': True,
             'task': task_to_dict(task)
         }
     except Task.DoesNotExist:
+        identifier = f"ID {task_id}" if task_id else f"UUID {uuid}"
         return {
             'success': False,
-            'error': f"Task with ID {params.task_id} not found"
+            'error': f"Task with {identifier} not found"
         }
     except Exception as e:
         logger.error(f"Error getting task: {e}")
@@ -127,19 +152,34 @@ async def get_task(params: TaskIdParam) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def complete_task(params: TaskIdParam) -> Dict[str, Any]:
+async def complete_task(
+    task_id: Annotated[Optional[int], Field(description="Task ID")] = None,
+    uuid: Annotated[Optional[str], Field(description="Task UUID")] = None
+) -> Dict[str, Any]:
     """Mark a task as completed"""
     try:
-        task = tw.tasks.get(id=params.task_id)
+        if not task_id and not uuid:
+            return {
+                'success': False,
+                'error': "Either task_id or uuid must be provided"
+            }
+
+        if task_id:
+            task = tw.tasks.get(id=task_id)
+        else:
+            task = tw.tasks.get(uuid=uuid)
+
         task.done()
+        identifier = task_id if task_id else uuid
         return {
             'success': True,
-            'message': f"Task {params.task_id} marked as completed"
+            'message': f"Task {identifier} marked as completed"
         }
     except Task.DoesNotExist:
+        identifier = f"ID {task_id}" if task_id else f"UUID {uuid}"
         return {
             'success': False,
-            'error': f"Task with ID {params.task_id} not found"
+            'error': f"Task with {identifier} not found"
         }
     except Exception as e:
         logger.error(f"Error completing task: {e}")
@@ -148,46 +188,55 @@ async def complete_task(params: TaskIdParam) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def uncomplete_task(params: TaskIdParam) -> Dict[str, Any]:
+async def uncomplete_task(
+    task_id: Annotated[Optional[int], Field(description="Task ID")] = None,
+    uuid: Annotated[Optional[str], Field(description="Task UUID")] = None
+) -> Dict[str, Any]:
     """Mark a completed task as pending (uncomplete it)"""
     try:
+        if not task_id and not uuid:
+            return {
+                'success': False,
+                'error': "Either task_id or uuid must be provided"
+            }
+
         # Find task by UUID or ID
         task = None
-        
+
         # Try by UUID first (most reliable for completed tasks)
-        if params.uuid:
+        if uuid:
             try:
-                task = tw.tasks.get(uuid=params.uuid)
+                task = tw.tasks.get(uuid=uuid)
             except Task.DoesNotExist:
                 pass
-        
+
         # Try by ID if no UUID or UUID failed
-        if not task and params.task_id:
+        if not task and task_id:
             try:
-                task = tw.tasks.get(id=params.task_id)
+                task = tw.tasks.get(id=task_id)
             except Task.DoesNotExist:
                 pass
-        
+
         if not task:
-            identifier = params.uuid or f"ID {params.task_id}"
+            identifier = uuid or f"ID {task_id}"
             return {
                 'success': False,
                 'error': f"Task with {identifier} not found"
             }
-        
+
         # Check if task is actually completed
         if task['status'] != 'completed':
-            identifier = params.uuid or f"ID {params.task_id}"
+            identifier = uuid or f"ID {task_id}"
             return {
                 'success': False,
                 'error': f"Task {identifier} is not completed (current status: {task['status']})"
             }
-        
+
         # Change status back to pending
         task['status'] = 'pending'
         task.save()
-        
-        identifier = params.uuid or f"ID {params.task_id}"
+
+        identifier = uuid or f"ID {task_id}"
         return {
             'success': True,
             'message': f"Task {identifier} marked as pending",
@@ -200,35 +249,42 @@ async def uncomplete_task(params: TaskIdParam) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def modify_task(params: ModifyTaskParams) -> Dict[str, Any]:
+async def modify_task(
+    task_id: Annotated[int, Field(description="Task ID to modify")],
+    description: Annotated[Optional[str], Field(description="New task description")] = None,
+    project: Annotated[Optional[str], Field(description="New project name")] = None,
+    priority: Annotated[Optional[str], Field(description="New priority (H/M/L)")] = None,
+    tags: Annotated[Optional[List[str]], Field(description="New list of tags")] = None,
+    due: Annotated[Optional[str], Field(description="New due date in ISO format (UTC), e.g., '2025-08-22T18:00:00Z'")] = None
+) -> Dict[str, Any]:
     """Modify an existing task"""
     try:
-        task = tw.tasks.get(id=params.task_id)
-        
-        if params.description:
-            task['description'] = params.description
-        if params.project is not None:
-            task['project'] = params.project
-        if params.priority is not None:
-            task['priority'] = params.priority
-        if params.tags is not None:
-            task['tags'] = set(params.tags)
-        if params.due is not None:
-            if params.due:
+        task = tw.tasks.get(id=task_id)
+
+        if description:
+            task['description'] = description
+        if project is not None:
+            task['project'] = project
+        if priority is not None:
+            task['priority'] = priority
+        if tags is not None:
+            task['tags'] = set(tags)
+        if due is not None:
+            if due:
                 # Parse the due date and convert to local time for TaskWarrior storage
-                due_dt = datetime.fromisoformat(params.due.replace('Z', '+00:00'))
+                due_dt = datetime.fromisoformat(due.replace('Z', '+00:00'))
                 # Convert UTC to local time for TaskWarrior
                 local_due = due_dt.astimezone()
                 task['due'] = local_due
             else:
                 task['due'] = None
-        
+
         task.save()
-        
+
         return {
             'success': True,
             'task': task_to_dict(task),
-            'message': f"Task {params.task_id} modified successfully"
+            'message': f"Task {task_id} modified successfully"
         }
     except Task.DoesNotExist:
         return {
@@ -242,14 +298,28 @@ async def modify_task(params: ModifyTaskParams) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def delete_task(params: TaskIdParam) -> Dict[str, Any]:
+async def delete_task(
+    task_id: Annotated[Optional[int], Field(description="Task ID")] = None,
+    uuid: Annotated[Optional[str], Field(description="Task UUID")] = None
+) -> Dict[str, Any]:
     """Delete a task"""
     try:
-        task = tw.tasks.get(id=params.task_id)
+        if not task_id and not uuid:
+            return {
+                'success': False,
+                'error': "Either task_id or uuid must be provided"
+            }
+
+        if task_id:
+            task = tw.tasks.get(id=task_id)
+        else:
+            task = tw.tasks.get(uuid=uuid)
+
         task.delete()
+        identifier = task_id if task_id else uuid
         return {
             'success': True,
-            'message': f"Task {params.task_id} deleted successfully"
+            'message': f"Task {identifier} deleted successfully"
         }
     except Task.DoesNotExist:
         return {
@@ -263,14 +333,28 @@ async def delete_task(params: TaskIdParam) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def start_task(params: TaskIdParam) -> Dict[str, Any]:
+async def start_task(
+    task_id: Annotated[Optional[int], Field(description="Task ID")] = None,
+    uuid: Annotated[Optional[str], Field(description="Task UUID")] = None
+) -> Dict[str, Any]:
     """Start working on a task (time tracking)"""
     try:
-        task = tw.tasks.get(id=params.task_id)
+        if not task_id and not uuid:
+            return {
+                'success': False,
+                'error': "Either task_id or uuid must be provided"
+            }
+
+        if task_id:
+            task = tw.tasks.get(id=task_id)
+        else:
+            task = tw.tasks.get(uuid=uuid)
+
         task.start()
+        identifier = task_id if task_id else uuid
         return {
             'success': True,
-            'message': f"Started working on task {params.task_id}",
+            'message': f"Started working on task {identifier}",
             'task': task_to_dict(task)
         }
     except Task.DoesNotExist:
@@ -285,14 +369,28 @@ async def start_task(params: TaskIdParam) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def stop_task(params: TaskIdParam) -> Dict[str, Any]:
+async def stop_task(
+    task_id: Annotated[Optional[int], Field(description="Task ID")] = None,
+    uuid: Annotated[Optional[str], Field(description="Task UUID")] = None
+) -> Dict[str, Any]:
     """Stop working on a task (time tracking)"""
     try:
-        task = tw.tasks.get(id=params.task_id)
+        if not task_id and not uuid:
+            return {
+                'success': False,
+                'error': "Either task_id or uuid must be provided"
+            }
+
+        if task_id:
+            task = tw.tasks.get(id=task_id)
+        else:
+            task = tw.tasks.get(uuid=uuid)
+
         task.stop()
+        identifier = task_id if task_id else uuid
         return {
             'success': True,
-            'message': f"Stopped working on task {params.task_id}",
+            'message': f"Stopped working on task {identifier}",
             'task': task_to_dict(task)
         }
     except Task.DoesNotExist:
@@ -307,38 +405,48 @@ async def stop_task(params: TaskIdParam) -> Dict[str, Any]:
             'error': str(e)
         }
 
-async def restore_task(params: RestoreTaskParams) -> Dict[str, Any]:
+async def restore_task(
+    task_id: Annotated[Optional[int], Field(description="ID of the deleted task to restore (may not exist for deleted tasks)")] = None,
+    uuid: Annotated[Optional[str], Field(description="UUID of the deleted task to restore")] = None,
+    status: Annotated[Optional[str], Field(description="Status to set for restored task (default: pending)")] = "pending"
+) -> Dict[str, Any]:
     """Restore a deleted task back to active status"""
     try:
+        if not task_id and not uuid:
+            return {
+                'success': False,
+                'error': "Either task_id or uuid must be provided"
+            }
+
         # Find the deleted task
         # Note: Deleted tasks may not have an ID, so we need to search more carefully
         deleted_tasks = list(tw.tasks.filter(status='deleted'))
         target_task = None
-        
+
         # Try to find by UUID first (most reliable)
-        if params.uuid:
+        if uuid:
             for task in deleted_tasks:
                 try:
-                    if task['uuid'] == params.uuid:
+                    if task['uuid'] == uuid:
                         target_task = task
                         break
                 except (KeyError, AttributeError):
                     pass
-        
+
         # If not found by UUID and task_id provided, try to find by ID
-        if not target_task and params.task_id:
+        if not target_task and task_id:
             for task in deleted_tasks:
                 try:
-                    task_id = task.get('id') if hasattr(task, 'get') else task['id']
-                    if task_id and task_id == params.task_id:
+                    tid = task.get('id') if hasattr(task, 'get') else task['id']
+                    if tid and tid == task_id:
                         target_task = task
                         break
                 except (KeyError, AttributeError):
                     pass
-        
+
         # If still not found and only task_id provided, use it as a hint
         # Get the most recently deleted task as a fallback
-        if not target_task and params.task_id and deleted_tasks:
+        if not target_task and task_id and deleted_tasks:
             # Sort by end time (deletion time) and get the most recent
             def get_sort_key(t):
                 try:
@@ -348,63 +456,63 @@ async def restore_task(params: RestoreTaskParams) -> Dict[str, Any]:
                         return str(t['end'] if 'end' in t else (t['modified'] if 'modified' in t else ''))
                 except:
                     return ''
-            
+
             sorted_deleted = sorted(deleted_tasks, key=get_sort_key, reverse=True)
             if sorted_deleted:
                 target_task = sorted_deleted[0]  # Get the most recently deleted
-        
+
         if not target_task:
             return {
                 'success': False,
                 'error': f'No deleted tasks found to restore'
             }
-        
+
         # Restore the task by modifying its status
         # Default to 'pending' if no status specified
-        new_status = params.status or 'pending'
+        new_status = status or 'pending'
         
         # TaskWarrior doesn't allow direct status modification to 'pending' from 'deleted'
         # We need to use the 'modify' command with specific syntax
         import subprocess
         
         # Use task modify with the UUID to restore the task
-        uuid = target_task['uuid']
+        uuid_val = target_task['uuid']
         result = subprocess.run(
-            ['task', uuid, 'modify', f'status:{new_status}'],
+            ['task', uuid_val, 'modify', f'status:{new_status}'],
             capture_output=True,
             text=True,
             timeout=30
         )
-        
+
         if result.returncode == 0:
             # Refresh the task to get updated data
-            restored_task = tw.tasks.get(uuid=uuid)
+            restored_task = tw.tasks.get(uuid=uuid_val)
             return {
                 'success': True,
-                'message': f'Successfully restored task {params.task_id}',
+                'message': f'Successfully restored task {task_id}',
                 'task': task_to_dict(restored_task)
             }
         else:
             # Try alternative method: undelete command if available
             result = subprocess.run(
-                ['task', str(params.task_id), 'undelete'],
+                ['task', str(task_id), 'undelete'],
                 input='yes\n',
                 capture_output=True,
                 text=True,
                 timeout=30
             )
-            
+
             if result.returncode == 0:
-                restored_task = tw.tasks.get(uuid=uuid)
-                
+                restored_task = tw.tasks.get(uuid=uuid_val)
+
                 # If status needs to be something other than pending, modify it
                 if new_status != 'pending':
                     restored_task['status'] = new_status
                     restored_task.save()
-                
+
                 return {
                     'success': True,
-                    'message': f'Successfully restored task {params.task_id} with status {new_status}',
+                    'message': f'Successfully restored task {task_id} with status {new_status}',
                     'task': task_to_dict(restored_task)
                 }
             else:

@@ -13,6 +13,7 @@ API_PORT=${MCPO_PORT:-8085}
 API_KEY=${MCPO_API_KEY:-"taskwarrior-secret-key"}
 HOST=${MCPO_HOST:-"0.0.0.0"}
 PATH_PREFIX=${MCPO_PATH_PREFIX:-"/api/mcpo/"}
+FRONTEND_PORT=${FRONTEND_PORT:-3033}
 SCRIPT_DIR=$(dirname "$0")
 
 echo -e "${GREEN}Starting MCPO for TaskWarrior MCP server...${NC}"
@@ -47,8 +48,11 @@ exec mcpo \
   --host $HOST \
   --port $API_PORT \
   --api-key $API_KEY \
+  --cors-allow-origins http://localhost:$FRONTEND_PORT \
   --cors-allow-origins http://localhost:3033 \
   --cors-allow-origins http://localhost:3000 \
   --cors-allow-origins http://localhost:5173 \
+  --cors-allow-origins http://localhost:8080 \
+  --cors-allow-origins http://localhost:8085 \
   --path-prefix "/api/mcpo/" \
   --hot-reload 
